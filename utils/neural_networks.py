@@ -20,7 +20,7 @@ sys.path.append("EfficientNet-PyTorch-3D")
 from efficientnet_pytorch_3d import EfficientNet3D
 import monai
 import os
-import onnx
+#import onnx
 
 class RSNAClassifier(nn.Module):
     def __init__(self):
