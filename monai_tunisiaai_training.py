@@ -15,6 +15,7 @@ from sklearn.metrics import roc_auc_score
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+import argparse
 
 #import config
 #from dataset import BrainRSNADataset
@@ -27,6 +28,10 @@ no_tumor_dir_path = "../RSNA-BTC-Datasets/no_tumor_train_mat"
 #ext_test_1_dir_path = "../../RSNA-BTC-Datasets/brats18_mat"
 #ext_test_0_dir_path = "../../RSNA-BTC-Datasets/OpenNeuroDS000221_ss_mat"
 new_dir_path = "../RSNA-BTC-Datasets/UPENN-GBM_mat"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--even", default=True, type=bool)
+args = parser.parse_args()
 
 def generate_datasets(types):
     data_packs = {}
@@ -228,7 +233,7 @@ def train_model(train_dl, validation_dl, fold_number, mri_type, model_name, epoc
 
     print(best_auc)
 
-def train_folded_models(fold, mri_type, model_name, batch_size, epochs, dataset_origin):
+def train_folded_models(fold, mri_type, model_name, batch_size, epochs, dataset_origin, idx_list):
     #data = pd.read_csv("train.csv")
     #train_df = data[data.fold != fold].reset_index(drop=False)
     #val_df = data[data.fold == fold].reset_index(drop=False)
@@ -304,17 +309,23 @@ def train_folded_models(fold, mri_type, model_name, batch_size, epochs, dataset_
         elif dataset_origin == "fn":
             i = 0
             for split in fn_splits:
-                fn_dataloader = get_all_split_loaders(fn_dataset_merged, fn_dataset_merged_no_tr, [split], batch_size)
-                fn_dataloaders = list(fn_dataloader[0])
-                print(f"(FN) Train validation splitted: {len(split[0])} {len(split[1])}")
-                train_dl = fn_dataloaders[0]
-                validation_dl = fn_dataloaders[1]
-                train_model(train_dl, validation_dl, i, mri_type, model_name+"_fn", epochs)
-                i += 1
+            	if i in idx_list: 
+		            fn_dataloader = get_all_split_loaders(fn_dataset_merged, fn_dataset_merged_no_tr, [split], batch_size)
+		            fn_dataloaders = list(fn_dataloader[0])
+		            print(f"(FN) Train validation splitted: {len(split[0])} {len(split[1])}")
+		            train_dl = fn_dataloaders[0]
+		            validation_dl = fn_dataloaders[1]
+		            train_model(train_dl, validation_dl, i, mri_type, model_name+"_fn", epochs)
+            	i += 1
     
 fold = 5
 mri_type = "T1wCE"
 batch_size = 1
 epochs = 15
-dataset_origin == "fn"
-train_folded_models(fold, mri_type, "resnet10", batch_size, epochs, dataset_origin)
+dataset_origin = "fn"
+idx_list = [0,2,4]
+idx_list_odd = [1,3]
+if args.even:
+	train_folded_models(fold, mri_type, "resnet10", batch_size, epochs, dataset_origin, idx_list)
+else:
+	train_folded_models(fold, mri_type, "resnet10", batch_size, epochs, dataset_origin, idx_list_odd)
