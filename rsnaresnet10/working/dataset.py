@@ -14,7 +14,7 @@ import utils
 
 class BrainRSNADataset(Dataset):
     def __init__(
-        self, data, transform=None, target="MGMT_value", mri_type="FLAIR", is_train=True, ds_type="forgot", do_load=True
+        self, data, transform=None, target="MGMT_value", mri_type="FLAIR", is_train=True, ds_type="forgot", do_load=False, folder="train"
     ):
         self.target = target
         self.data = data
@@ -22,7 +22,7 @@ class BrainRSNADataset(Dataset):
 
         self.transform = transform
         self.is_train = is_train
-        self.folder = "../../RSNA-BTC-Datasets/train" if self.is_train else "../../RSNA-BTC-Datasets/test"
+        self.folder = f"../../RSNA-BTC-Datasets/{folder}" if self.is_train else "../../RSNA-BTC-Datasets/test"
         self.do_load = do_load
         self.ds_type = ds_type
         self.img_indexes = self._prepare_biggest_images()
@@ -53,7 +53,10 @@ class BrainRSNADataset(Dataset):
             print("Caulculating the best scans for every case...")
             for row in tqdm(self.data.iterrows(), total=len(self.data)):
                 case_id = str(int(row[1].BraTS21ID)).zfill(5)
-                path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
+                if self.folder == "train":
+                    path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
+                else:
+                    path = f"{self.folder}/{self.folder}-{case_id}/*_{self.type}/*.dcm"
                 files = sorted(
                     glob.glob(path),
                     key=lambda var: [
@@ -78,7 +81,11 @@ class BrainRSNADataset(Dataset):
     ):
         case_id = str(case_id).zfill(5)
 
-        path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
+        #path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
+        if self.folder == "train":
+            path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
+        else:
+            path = f"{self.folder}/{self.folder}-{case_id}/*_{self.type}/*.dcm"
         files = sorted(
             glob.glob(path),
             key=lambda var: [
@@ -86,7 +93,6 @@ class BrainRSNADataset(Dataset):
             ],
         )
 
-    
         middle = self.img_indexes[case_id]
 
         # # middle = len(files) // 2

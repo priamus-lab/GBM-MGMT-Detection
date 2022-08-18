@@ -11,33 +11,35 @@ from sklearn.metrics import roc_auc_score
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 import config
 from dataset import BrainRSNADataset
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--fold", default=0, type=int)
+parser.add_argument("--csv_file", default="train.csv", type=str)
 parser.add_argument("--type", default="FLAIR", type=str)
 parser.add_argument("--model_name", default="b0", type=str)
 args = parser.parse_args()
 
-data = pd.read_csv("train.csv")
-train_df = data[data.fold != args.fold].reset_index(drop=False)
-val_df = data[data.fold == args.fold].reset_index(drop=False)
+data = pd.read_csv(f"../../RSNA-BTC-Datasets/{args.csv_file}")
+train_df = data[data.split == 0].reset_index(drop=False)
+val_df = data[data.split == 1].reset_index(drop=False)
+test_df = data[data.split == 2].reset_index(drop=False)
 
 
 device = torch.device("cuda")
 
-print(f"train_{args.type}_{args.fold}")
-train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}_{args.fold}")
+print(f"train_{args.type}")
+train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}")
 
-valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}_{args.fold}")
+valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}")
 
 
 train_dl = torch.utils.data.DataLoader(
     train_dataset,
     batch_size=config.TRAINING_BATCH_SIZE,
-    shuffle=True,
+    shuffle=False,
     num_workers=config.n_workers,
     drop_last=True,
     pin_memory=True,
@@ -53,7 +55,7 @@ validation_dl = torch.utils.data.DataLoader(
 
 
 model = monai.networks.nets.resnet10(spatial_dims=3, n_input_channels=1, n_classes=1)
-optimizer = optim.Adam(model.parameters(), lr=0.0001)
+optimizer = optim.Adam(model.parameters(), lr=0.0001) #0.0001
 
 scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[10], gamma=0.5, last_epoch=-1, verbose=True)
 
@@ -131,13 +133,15 @@ for counter in range(config.N_EPOCHS):
             all_files = os.listdir("../../RSNA-BTC-Datasets/rsnaresnet10_output_weights/")
 
             for f in all_files:
-                if f"{args.model_name}_{args.type}_fold{args.fold}" in f:
+                if f"{args.model_name}_{args.type}_holdout" in f:
                     os.remove(f"../../RSNA-BTC-Datasets/rsnaresnet10_output_weights/{f}")
 
             best_auc = auc_score
+            date_time = datetime.now()
+            date_str = date_time.strftime("%b%d_%H-%M-%S")
             torch.save(
                 model.state_dict(),
-                f"../../RSNA-BTC-Datasets/rsnaresnet10_output_weights/3d-{args.model_name}_{args.type}_fold{args.fold}_{round(best_auc,3)}.pth",
+                f"../../RSNA-BTC-Datasets/rsnaresnet10_output_weights/3d-{args.model_name}_{args.type}_holdout_{date_str}_{round(best_auc,3)}.pth",
             )
 
 print(best_auc)
