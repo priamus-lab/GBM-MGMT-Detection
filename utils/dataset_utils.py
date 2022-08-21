@@ -1,6 +1,8 @@
 import random
 import os
+import sys
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torch.utils import data as torch_data
@@ -15,6 +17,9 @@ from tqdm import tqdm
 import math
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, SubsetRandomSampler
 from sklearn.model_selection import StratifiedKFold
+import logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+                    format='%(asctime)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
 def set_seed(seed):
     random.seed(seed)
@@ -695,6 +700,61 @@ def get_all_split_loaders(dataset, dataset_no_tr, cv_splits, batch_size):
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
+"""
+def get_split_from_df(dataset_0, dataset_1, df, is_brats21=True):
+    i = 0
+    idx_list = []
+    if is_brats21:
+        for elem in dataset_0:
+           # print(elem[0][0][:5])
+            elem_id = int(elem[0][0][:5])
+            if elem_id in df["BraTS21ID"]:
+                idx_list.append(i)
+            i += 1
+        for elem in dataset_1:
+           # print(elem[0][0][:5])
+            elem_id = int(elem[0][0][:5])
+            if elem_id in df["BraTS21ID"]:
+                idx_list.append(i)
+            i += 1
+    else:
+        for elem in dataset_0:
+           # print(elem[0][0][:5])
+            elem_id = int(elem[0][0].split("-")[2][:5])
+            #print(elem_id)
+            if elem_id in df["BraTS21ID"]:
+                idx_list.append(i)
+            i += 1
+        for elem in dataset_1:
+           # print(elem[0][0][:5])
+            elem_id = int(elem[0][0].split("-")[2][:5])
+            #print(elem_id)
+            if elem_id in df["BraTS21ID"]:
+                idx_list.append(i)
+            i += 1
+    return idx_list
+"""
+def get_split_from_df(dataset, df, is_brats21=True):
+    i = 0
+    idx_list = []
+    if is_brats21:
+        for elem in dataset:
+           # print(elem[0][0][:5])
+            if elem[0][0][0] != 'U':
+                elem_id = int(elem[0][0][:5])
+                if elem_id in list(df["BraTS21ID"]):
+                    idx_list.append(i)
+            i += 1
+    else:
+        for elem in dataset:
+           # print(elem[0][0][:5])
+            if elem[0][0][0] == 'U':
+                elem_id = int(elem[0][0].split("-")[2][:5])
+                elem_id = f"UPENN-GBM-{elem_id}"
+                if elem_id in list(df["BraTS21ID"]):
+                    idx_list.append(i)
+            i += 1
+    return idx_list
 
 def get_splits(dataset_0, dataset_1, val_total_ratio, is_k_fold, test_total_ratio=0.1, k=5):
     if type(is_k_fold) == str:
@@ -755,3 +815,255 @@ def get_splits(dataset_0, dataset_1, val_total_ratio, is_k_fold, test_total_rati
             splits.append((train_idx,val_idx,test_idx))
         """
     return splits
+
+def generate_datasets(types, info, transform, sel_slices, m_path="", n_path="", f_path="", h_path=""):
+    data_packs = {}
+    for t in types:
+        print("Type: "+t)
+        # Competition Train + Val + Test
+        if m_path != "":
+            m_dataset_0 = Dataset(m_path, [t], list_classes=["0"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+            logging.info("(M0) Train/Val datasets size: {}".format(len(m_dataset_0)))
+
+            m_dataset_1 = Dataset(m_path, [t], list_classes=["1"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+            logging.info("(M1) Train/Val datasets size: {}".format(len(m_dataset_1)))
+
+        # External Train + Val + Test
+        #t_dataset_0 = Dataset(ext_test_0_dir_path, [t], list_classes=["0"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+        #logging.info("Train/Val datasets size: {}".format(len(t_dataset_0)))
+
+        #t_dataset_1 = Dataset(ext_test_1_dir_path, [t], list_classes=["1"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+        #logging.info("Train/Val datasets size: {}".format(len(t_dataset_1)))
+
+        # UPENN Train + Val + Test
+        if n_path != "":
+            n_dataset_0 = Dataset(n_path, [t], list_classes=["0"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+            logging.info("(N0) Train/Val datasets size: {}".format(len(n_dataset_0)))
+
+            n_dataset_1 = Dataset(n_path, [t], list_classes=["1"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+            logging.info("(N1) Train/Val datasets size: {}".format(len(n_dataset_1)))
+            
+        if m_path != "" and n_path != "":
+            logging.info("Concatenating M0 and N0...")
+            mn_dataset_0 = Dataset().concat_datasets(m_dataset_0, n_dataset_0)
+
+            logging.info("(MN0) Train/Val datasets size: {}".format(len(mn_dataset_0)))
+
+            logging.info("Concatenating M1 and N1...")
+            mn_dataset_1 = Dataset().concat_datasets(m_dataset_1, n_dataset_1)
+
+            logging.info("(MN1) Train/Val datasets size: {}".format(len(mn_dataset_1)))
+        
+        if t == "KLF":
+            # Competition (Tumor Only) Train + Val + Test
+            if f_path != "":
+                f_dataset_0 = Dataset(f_path, [t], list_classes=["0"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+                logging.info("(F0) Train/Val datasets size: {}".format(len(f_dataset_0)))
+
+                f_dataset_1 = Dataset(f_path, [t], list_classes=["1"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+                logging.info("(F1) Train/Val datasets size: {}".format(len(f_dataset_1)))
+            
+            # Competition (No Tumor) Train + Val + Test
+            if h_path != "":
+                h_dataset_0 = Dataset(h_path, [t], list_classes=["0"], transform=transform, ext=info["ext"], dims=info["dims"], sel_slices=sel_slices)
+
+                logging.info("(H0) Train/Val datasets size: {}".format(len(h_dataset_0)))
+            
+            # Competition (Tumor Only) + UPENN Train + Val + Test
+            if f_path != "" and n_path != "":
+                fn_dataset_0 = Dataset().concat_datasets(f_dataset_0, n_dataset_0)
+
+                logging.info("(FN0) Train/Val datasets size: {}".format(len(fn_dataset_0)))
+
+                fn_dataset_1 = Dataset().concat_datasets(f_dataset_1, n_dataset_1)
+
+                logging.info("(FN1) Train/Val datasets size: {}".format(len(fn_dataset_1)))
+        
+        if t == "KLF":
+            data_packs[t] = {
+                "m_dataset_0": m_dataset_0 if m_path != "" else None,
+                "m_dataset_1": m_dataset_1 if m_path != "" else None,
+                "f_dataset_0": f_dataset_0 if f_path != "" else None,
+                "f_dataset_1": f_dataset_1 if f_path != "" else None,
+                "h_dataset_0": h_dataset_0 if h_path != "" else None,
+                #"t_dataset_0": t_dataset_0,
+                #"t_dataset_1": t_dataset_1,
+                "n_dataset_0": n_dataset_0 if n_path != "" else None,
+                "n_dataset_1": n_dataset_1 if n_path != "" else None,
+                "mn_dataset_0": mn_dataset_0 if m_path != "" and n_path != "" else None,
+                "mn_dataset_1": mn_dataset_1 if m_path != "" and n_path != "" else None,
+                "fn_dataset_0": fn_dataset_0 if f_path != "" and n_path != "" else None,
+                "fn_dataset_1": fn_dataset_1 if f_path != "" and n_path != "" else None
+            }
+        else:
+            data_packs[t] = {
+                "m_dataset_0": m_dataset_0 if m_path != "" else None,
+                "m_dataset_1": m_dataset_1 if m_path != "" else None,
+                #"t_dataset_0": t_dataset_0,
+                #"t_dataset_1": t_dataset_1,
+                "n_dataset_0": n_dataset_0 if n_path != "" else None,
+                "n_dataset_1": n_dataset_1 if n_path != "" else None,
+                "mn_dataset_0": mn_dataset_0 if m_path != "" and n_path != "" else None,
+                "mn_dataset_1": mn_dataset_1 if m_path != "" and n_path != "" else None
+            }
+    return data_packs
+
+def get_merged_dataset(dataset_0, dataset_1, info, csv_file=[""], is_fold=False, fold_num=0):
+    dataset_merged = Dataset().concat_datasets(dataset_0, dataset_1)
+    dataset_merged_no_tr = Dataset().concat_datasets(dataset_0, dataset_1, import_transform=False)
+
+    if is_fold:
+        train_df = pd.DataFrame({"BraTS21ID": [], "MGMT_value": [], "fold": []})
+        val_df = pd.DataFrame({"BraTS21ID": [], "MGMT_value": [], "fold": []})
+        t_s = []
+        v_s = []
+        for file in csv_file:
+            data = pd.read_csv(f"../RSNA-BTC-Datasets/{file}")
+            #train_df = data[data.fold != fold_num].reset_index(drop=False)
+            train = data.drop(data[data.fold == fold_num].index)
+            #val_df = data[data.fold == fold_num].reset_index(drop=False)
+            val = data.drop(data[data.fold != fold_num].index)
+            
+            #train_df = train_df.append(train, ignore_index=True)
+            #val_df = val_df.append(train, ignore_index=True)
+            if file == "train_fold.csv":
+                #print(train)
+                train_split = get_split_from_df(dataset_merged, train)
+                val_split = get_split_from_df(dataset_merged, val)
+            else:
+                #train.loc[~(train["BraTS21ID"] < 0), "BraTS21ID"] = "UPENN-GBM-" + str(train["BraTS21ID"])
+                #val.loc[~(val["BraTS21ID"] < 0), "BraTS21ID"] = "UPENN-GBM-" + str(val["BraTS21ID"])
+                #print(train)
+                train["BraTS21ID"] = train["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{x}")
+                val["BraTS21ID"] = val["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{x}")
+                #print(train)
+                train_split = get_split_from_df(dataset_merged, train, is_brats21=False)
+                val_split = get_split_from_df(dataset_merged, val, is_brats21=False)
+            
+            t_s += train_split
+            v_s += val_split
+        splits = [(t_s, v_s)]
+    else:
+        splits = get_splits(dataset_0, dataset_1, info["val_total_ratio"], info["is_10_fold"], 0.1)
+    print(splits)
+    return dataset_merged, dataset_merged_no_tr, splits
+
+def get_trainval_loader(dataset_merged, splits, info):
+    g_cpu = torch.Generator()
+    train_folds_idx = list(splits[0][0])
+    valid_folds_idx = list(splits[0][1])
+    #m_test_folds_idx = m_splits[0][2]
+    # Test for 
+    idxs = train_folds_idx + valid_folds_idx
+    print(idxs)
+    sampler = SubsetRandomSampler(idxs, g_cpu)
+    loader = DataLoader(dataset=dataset_merged, batch_size=info["batch_size"], sampler=sampler, num_workers=2, worker_init_fn=np.random.seed(0))
+    return loader
+
+def get_loaders(packs, info, is_fold=False, fold_num=0):
+    loader_packs = {}
+    for t, pack in packs.items():
+        print("Type: "+t)
+        
+        if pack['m_dataset_0'] is not None:
+            m_dataset_merged, m_dataset_merged_no_tr, m_splits = get_merged_dataset(pack['m_dataset_0'], pack['m_dataset_1'], info, ["train_fold.csv"], is_fold, fold_num)
+            m_dataloader = get_all_split_loaders(m_dataset_merged, m_dataset_merged_no_tr, m_splits, info["batch_size"])
+            if not is_fold:
+                m_trainval_dataloader = [get_trainval_loader(m_dataset_merged, m_splits, info)]
+                m_dataloaders = list(m_dataloader[0]) + m_trainval_dataloader
+                logging.info("(M) Train validation test splitted: {} {} {}".format(len(m_splits[0][0]),len(m_splits[0][1]),len(m_splits[0][2])))
+            else:
+                #m_dataloaders = list(m_dataloader[0])
+                m_trainval_dataloader = [get_trainval_loader(m_dataset_merged, m_splits, info)]
+                m_dataloaders = list(m_dataloader[0]) + m_trainval_dataloader
+                logging.info("(M) Train validation splitted: {} {}".format(len(m_splits[0][0]),len(m_splits[0][1])))
+                
+        if pack["n_dataset_0"] is not None:
+            n_dataset_merged, n_dataset_merged_no_tr, n_splits = get_merged_dataset(pack['n_dataset_0'], pack['n_dataset_1'], info, ["upenn_train_fold.csv"], is_fold, fold_num)
+            n_dataloader = get_all_split_loaders(n_dataset_merged, n_dataset_merged_no_tr, n_splits, info["batch_size"])
+            if not is_fold:
+                n_trainval_dataloader = [get_trainval_loader(n_dataset_merged, n_splits, info)]
+                n_dataloaders = list(n_dataloader[0]) + n_trainval_dataloader
+                logging.info("(N) Train validation test splitted: {} {} {}".format(len(n_splits[0][0]),len(n_splits[0][1]),len(n_splits[0][2])))
+            else:
+                #n_dataloaders = list(n_dataloader[0])
+                n_trainval_dataloader = [get_trainval_loader(n_dataset_merged, n_splits, info)]
+                n_dataloaders = list(n_dataloader[0]) + n_trainval_dataloader
+                logging.info("(N) Train validation splitted: {} {}".format(len(n_splits[0][0]),len(n_splits[0][1])))
+                
+        if pack["mn_dataset_0"] is not None:
+            mn_dataset_merged, mn_dataset_merged_no_tr, mn_splits = get_merged_dataset(pack['mn_dataset_0'], pack['mn_dataset_1'], info, ["train_fold.csv", "upenn_train_fold.csv"], is_fold, fold_num)
+            mn_dataloader = get_all_split_loaders(mn_dataset_merged, mn_dataset_merged_no_tr, mn_splits, info["batch_size"])
+            if not is_fold:
+                mn_trainval_dataloader = [get_trainval_loader(mn_dataset_merged, mn_splits, info)]
+                mn_dataloaders = list(mn_dataloader[0]) + mn_trainval_dataloader
+                logging.info("(MN) Train validation test splitted: {} {} {}".format(len(mn_splits[0][0]),len(mn_splits[0][1]),len(mn_splits[0][2])))
+            else:
+                #n_dataloaders = list(n_dataloader[0])
+                mn_trainval_dataloader = [get_trainval_loader(mn_dataset_merged, mn_splits, info)]
+                mn_dataloaders = list(mn_dataloader[0]) + mn_trainval_dataloader
+                logging.info("(MN) Train validation splitted: {} {}".format(len(mn_splits[0][0]),len(mn_splits[0][1])))
+                
+        if t == "KLF" and pack["f_dataset_0"] is not None:
+            if not is_fold:
+                f_dataset_merged, f_dataset_merged_no_tr, f_splits = get_merged_dataset(pack['f_dataset_0'], pack['f_dataset_1'], info)
+                f_dataloader = get_all_split_loaders(f_dataset_merged, f_dataset_merged_no_tr, f_splits, info["batch_size"])
+                f_trainval_dataloader = [get_trainval_loader(f_dataset_merged, f_splits, info)]
+                f_dataloaders = list(f_dataloader[0]) + f_trainval_dataloader
+                logging.info("(F) Train validation test splitted: {} {} {}".format(len(f_splits[0][0]),len(f_splits[0][1]),len(f_splits[0][2])))
+                
+        if t == "KLF" and pack["h_dataset_0"] is not None:
+            if not is_fold:
+                h_dataset_merged, h_dataset_merged_no_tr, h_splits = get_merged_dataset(pack['h_dataset_0'], None, info)
+                h_dataloader = get_all_split_loaders(h_dataset_merged, h_dataset_merged_no_tr, h_splits, info["batch_size"])
+                h_trainval_dataloader = [get_trainval_loader(h_dataset_merged, h_splits, info)]
+                h_dataloaders = list(h_dataloader[0]) + h_trainval_dataloader
+                logging.info("(H) Train validation test splitted: {} {} {}".format(len(h_splits[0][0]),len(h_splits[0][1]),len(h_splits[0][2])))
+                
+        if t == "KLF" and pack["fn_dataset_0"] is not None:
+            if not is_fold:
+                fn_dataset_merged, fn_dataset_merged_no_tr, fn_splits = get_merged_dataset(pack['fn_dataset_0'], pack['fn_dataset_1'], info)
+                fn_dataloader = get_all_split_loaders(fn_dataset_merged, fn_dataset_merged_no_tr, fn_splits, info["batch_size"])
+                fn_trainval_dataloader = [get_trainval_loader(fn_dataset_merged, fn_splits, info)]
+                fn_dataloaders = list(fn_dataloader[0]) + fn_trainval_dataloader
+                logging.info("(FN) Train validation test splitted: {} {} {}".format(len(fn_splits[0][0]),len(fn_splits[0][1]),len(fn_splits[0][2])))
+
+
+        #t_dataset_merged, t_dataset_merged_no_tr, t_splits = get_merged_dataset(pack['t_dataset_0'], pack['t_dataset_1'])
+        #t_dataloader = get_all_split_loaders(t_dataset_merged, t_dataset_merged_no_tr, t_splits, info["batch_size"])
+        #t_dataloaders = list(t_dataloader[0])
+        #logging.info("(T) Train validation test splitted: {} {} {}".format(len(t_splits[0][0]),len(t_splits[0][1]),len(t_splits[0][2])))
+        
+        if is_fold:
+            loader_packs[t] = {
+                "m_dataloaders": m_dataloaders if pack["m_dataset_0"] is not None else None,
+                "n_dataloaders": n_dataloaders if pack["n_dataset_0"] is not None else None,
+                "mn_dataloaders": mn_dataloaders if pack["mn_dataset_0"] is not None else None
+            }
+        elif t == "KLF":
+            loader_packs[t] = {
+                "m_dataloaders": m_dataloaders if pack["m_dataset_0"] is not None else None,
+                "f_dataloaders": f_dataloaders if pack["f_dataset_0"] is not None else None,
+                "h_dataloaders": h_dataloaders if pack["h_dataset_0"] is not None else None,
+                "n_dataloaders": n_dataloaders if pack["n_dataset_0"] is not None else None,
+                #"t_dataloaders": t_dataloaders,
+                "mn_dataloaders": mn_dataloaders if pack["mn_dataset_0"] is not None else None,
+                "fn_dataloaders": fn_dataloaders if pack["fn_dataset_0"] is not None else None
+            }
+        else:
+            loader_packs[t] = {
+                "m_dataloaders": m_dataloaders if pack["m_dataset_0"] is not None else None,
+                "n_dataloaders": n_dataloaders if pack["n_dataset_0"] is not None else None,
+                "mn_dataloaders": mn_dataloaders if pack["mn_dataset_0"] is not None else None
+                #"t_dataloaders": t_dataloaders
+            }
+        
+    return loader_packs

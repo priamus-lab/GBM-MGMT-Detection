@@ -19,19 +19,40 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--fold", default=0, type=int)
 parser.add_argument("--type", default="FLAIR", type=str)
 parser.add_argument("--model_name", default="b0", type=str)
+parser.add_argument("--csv_file", default="train_fold.csv", type=str)
 args = parser.parse_args()
-
-data = pd.read_csv("train.csv")
-train_df = data[data.fold != args.fold].reset_index(drop=False)
-val_df = data[data.fold == args.fold].reset_index(drop=False)
-
+if args.csv_file != "all":
+    data = pd.read_csv(f"../../RSNA-BTC-Datasets/{args.csv_file}")
+    if arg.csv_file == "upenn_train_fold_t1wce.csv":
+        data["BraTS21ID"] = data["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{str(x).zfill(5)}")
+    train_df = data[data.fold != args.fold].reset_index(drop=False)
+    val_df = data[data.fold == args.fold].reset_index(drop=False)
+else:
+    data1 = pd.read_csv(f"../../RSNA-BTC-Datasets/train_fold.csv")
+    train_df1 = data1[data1.fold != args.fold].reset_index(drop=False)
+    val_df1 = data1[data1.fold == args.fold].reset_index(drop=False)
+    data2 = pd.read_csv(f"../../RSNA-BTC-Datasets/upenn_train_fold_t1wce.csv")
+    data2["BraTS21ID"] = data2["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{str(x).zfill(5)}")
+    train_df2 = data2[data2.fold != args.fold].reset_index(drop=False)
+    val_df2 = data2[data2.fold == args.fold].reset_index(drop=False)
+    train_df = train_df1.append(train_df2, ignore_index=True)
+    val_df = val_df1.append(val_df2, ignore_index=True)
 
 device = torch.device("cuda")
 
 print(f"train_{args.type}_{args.fold}")
-train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}_{args.fold}")
+if args.csv_file == "all":
+    train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}_{args.fold}", folder="all")
 
-valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}_{args.fold}")
+    valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}_{args.fold}", folder="all")
+elif args.csv_file == "train_fold.csv":
+    train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}_{args.fold}")
+
+    valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}_{args.fold}")
+else:
+    train_dataset = BrainRSNADataset(data=train_df, mri_type=args.type, ds_type=f"train_{args.type}_{args.fold}", folder="UPENN-GBM")
+
+    valid_dataset = BrainRSNADataset(data=val_df, mri_type=args.type, ds_type=f"val_{args.type}_{args.fold}", folder="UPENN-GBM")
 
 
 train_dl = torch.utils.data.DataLoader(

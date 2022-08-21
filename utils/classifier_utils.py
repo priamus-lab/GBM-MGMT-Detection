@@ -23,6 +23,7 @@ import json
 #import onnx
 from copy import deepcopy
 import collections
+import gc
 
 def plot_confusion_matrix(y_valid, y_pred,
                           normalize=False,
@@ -869,7 +870,7 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                         predicted = (outputs>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
 
-                    X_list.extend(X)
+                    #X_list.extend(X)
                     y_pred.extend(predicted.tolist())
 
                     if model.output_size is not None and model.output_size == 2:
@@ -889,8 +890,15 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                     ids.extend(list(img_ids_fixed))
                     if is_target_included:
                         y.extend(labels.tolist())
-                    #print(y)
-                    #print(y_pred)
+                        
+                del outputs
+                del X
+                del predicted
+                gc.collect()
+                torch.cuda.empty_cache()
+                    
+                #print(y)
+                #print(y_pred)
     if labelfile is not None:
         hl = pd.read_csv(labelfile, dtype={"BraTS21ID": object})
         hl["BraTS21ID"] = hl["BraTS21ID"].apply(lambda x: str(x))
@@ -1017,6 +1025,9 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
         print(f"Predictions: {y_pred_0_count} without tumor, {y_pred_1_count} with tumor")
         
 
+    del checkpoint
+    del model
+    torch.cuda.empty_cache()
     return preddf, ids, X_list, y, y_pred, y_prob
 
 def mean_voting_y(ids, y_pred, y_prob, hl=None, y=None):
@@ -1090,3 +1101,24 @@ def highlight_equal(s, column1, column2):
     is_eq = pd.Series(data=False, index=s.index)
     is_eq[column1] = s.loc[column1] == s.loc[column2]
     return ['background-color: green' if is_eq.any() else '' for v in is_eq]
+
+def get_metrics(y, y_pred, y_prob, name):
+    auc = roc_auc_score(y, y_prob)
+    acc = [1 if yy == out else 0 for (yy,out) in zip(y,y_pred)].count(1)/len(y_pred)
+    total_0_count = y.count(0)
+    total_1_count = y.count(1)
+    total_1_pred_count = list(y_pred).count(1)
+    true_0 = [1 if yy == out and yy == 0 else 0 for (yy,out) in zip(y,y_pred)].count(1)
+    true_1 = [1 if yy == out and yy == 1 else 0 for (yy,out) in zip(y,y_pred)].count(1)
+    spec = true_0/total_0_count
+    sens = true_1/total_1_count
+    if total_1_pred_count != 0:
+        prec = true_1/total_1_pred_count
+    else:
+        prec = 0
+    print(f"Prediction AUC: {auc:.4f}")
+    print(f"Prediction Accuracy: {acc:.4f}")
+    print(f"Prediction Specificity: {spec:.4f}")
+    print(f"Prediction Sensitivity: {sens:.4f}")
+    print(f"Prediction Precision: {prec:.4f}")
+    return pd.DataFrame({"model": [name], "AUC": [auc], "acc": [acc], "spec": [spec], "sens": [sens], "prec": [prec]})
