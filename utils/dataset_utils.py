@@ -441,13 +441,14 @@ class Dataset(torch_data.Dataset):
                         elif len(self.samples_dict.keys()) > 1:
                             sample = loader_fc_specific(path, top_idx)
                         else:
-                            sample, _ = loader_fc_filtered(path, self.sel_slices)
+                            sample, top = loader_fc_filtered(path, self.sel_slices)
                     else:
                         sample = loader_fc(path)
             elif self.ext == "nii":
                 sample, sf = loader_fc_3d_nifti(path)
 
             img_id = os.path.basename(path)
+            #print(f"Top idx of {img_id}: {top[0]}")
             #print(img_id)
 
             #if self.targets is None:
@@ -934,8 +935,9 @@ def get_merged_dataset(dataset_0, dataset_1, info, csv_file=[""], is_fold=False,
             
             #train_df = train_df.append(train, ignore_index=True)
             #val_df = val_df.append(train, ignore_index=True)
-            if file == "train_fold.csv":
-                #print(train)
+            pd.set_option("display.max_rows", None, "display.max_columns", None)
+            if file[:10] == "train_fold":
+                #print(val)
                 train_split = get_split_from_df(dataset_merged, train)
                 val_split = get_split_from_df(dataset_merged, val)
             else:
@@ -968,13 +970,13 @@ def get_trainval_loader(dataset_merged, splits, info):
     loader = DataLoader(dataset=dataset_merged, batch_size=info["batch_size"], sampler=sampler, num_workers=2, worker_init_fn=np.random.seed(0))
     return loader
 
-def get_loaders(packs, info, is_fold=False, fold_num=0):
+def get_loaders(packs, info, is_fold=False, fold_num=0, extra=""):
     loader_packs = {}
     for t, pack in packs.items():
         print("Type: "+t)
         
         if pack['m_dataset_0'] is not None:
-            m_dataset_merged, m_dataset_merged_no_tr, m_splits = get_merged_dataset(pack['m_dataset_0'], pack['m_dataset_1'], info, ["train_fold.csv"], is_fold, fold_num)
+            m_dataset_merged, m_dataset_merged_no_tr, m_splits = get_merged_dataset(pack['m_dataset_0'], pack['m_dataset_1'], info, [f"train_fold{extra}.csv"], is_fold, fold_num)
             m_dataloader = get_all_split_loaders(m_dataset_merged, m_dataset_merged_no_tr, m_splits, info["batch_size"])
             if not is_fold:
                 m_trainval_dataloader = [get_trainval_loader(m_dataset_merged, m_splits, info)]
@@ -987,7 +989,7 @@ def get_loaders(packs, info, is_fold=False, fold_num=0):
                 logging.info("(M) Train validation splitted: {} {}".format(len(m_splits[0][0]),len(m_splits[0][1])))
                 
         if pack["n_dataset_0"] is not None:
-            n_dataset_merged, n_dataset_merged_no_tr, n_splits = get_merged_dataset(pack['n_dataset_0'], pack['n_dataset_1'], info, ["upenn_train_fold.csv"], is_fold, fold_num)
+            n_dataset_merged, n_dataset_merged_no_tr, n_splits = get_merged_dataset(pack['n_dataset_0'], pack['n_dataset_1'], info, [f"upenn_train_fold{extra}.csv"], is_fold, fold_num)
             n_dataloader = get_all_split_loaders(n_dataset_merged, n_dataset_merged_no_tr, n_splits, info["batch_size"])
             if not is_fold:
                 n_trainval_dataloader = [get_trainval_loader(n_dataset_merged, n_splits, info)]
@@ -1000,7 +1002,7 @@ def get_loaders(packs, info, is_fold=False, fold_num=0):
                 logging.info("(N) Train validation splitted: {} {}".format(len(n_splits[0][0]),len(n_splits[0][1])))
                 
         if pack["mn_dataset_0"] is not None:
-            mn_dataset_merged, mn_dataset_merged_no_tr, mn_splits = get_merged_dataset(pack['mn_dataset_0'], pack['mn_dataset_1'], info, ["train_fold.csv", "upenn_train_fold.csv"], is_fold, fold_num)
+            mn_dataset_merged, mn_dataset_merged_no_tr, mn_splits = get_merged_dataset(pack['mn_dataset_0'], pack['mn_dataset_1'], info, [f"train_fold{extra}.csv", f"upenn_train_fold{extra}.csv"], is_fold, fold_num)
             mn_dataloader = get_all_split_loaders(mn_dataset_merged, mn_dataset_merged_no_tr, mn_splits, info["batch_size"])
             if not is_fold:
                 mn_trainval_dataloader = [get_trainval_loader(mn_dataset_merged, mn_splits, info)]

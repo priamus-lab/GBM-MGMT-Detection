@@ -164,7 +164,7 @@ class Trainer:
                 if self.model.output_size == 2:
                     _, predicted = torch.max(outputs.data, 1)
                 else:
-                    predicted = (outputs>0.5).int()
+                    predicted = (outputs.sigmoid()>0.5).int()
                     predicted = torch.reshape(predicted, (-1,))
                     
                 outputs_all.extend(predicted.tolist())
@@ -254,7 +254,7 @@ class Trainer:
                     if self.model.output_size == 2:
                         _, predicted = torch.max(outputs.data, 1)
                     else:
-                        predicted = (outputs>0.5).int()
+                        predicted = (outputs.sigmoid()>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
 
                     outputs_all.extend(predicted.tolist())
@@ -292,7 +292,7 @@ class Trainer:
                     if hasattr(self.model, 'output_size') and self.model.output_size == 2:
                         _, predicted = torch.max(outputs.data, 1)
                     else:
-                        predicted = (outputs>0.5).int()
+                        predicted = (outputs.sigmoid()>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
 
                     outputs_all.extend(predicted.tolist())
@@ -383,7 +383,7 @@ class Trainer:
                     if hasattr(self.model, 'output_size') and  self.model.output_size == 2:
                         _, predicted = torch.max(outputs.data, 1)
                     else:
-                        predicted = (outputs>0.5).int()
+                        predicted = (outputs.sigmoid()>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
                     
                     outputs_all.extend(predicted.tolist())
@@ -431,7 +431,7 @@ class Trainer:
                         if hasattr(self.model, 'output_size') and self.model.output_size == 2:
                             _, predicted = torch.max(outputs.data, 1)
                         else:
-                            predicted = (outputs>0.5).int()
+                            predicted = (outputs.sigmoid()>0.5).int()
                             predicted = torch.reshape(predicted, (-1,))
 
                         outputs_all.extend(predicted.tolist())
@@ -500,7 +500,7 @@ class Trainer:
                         if hasattr(self.model, 'output_size') and self.model.output_size == 2:
                             _, predicted = torch.max(outputs.data, 1)
                         else:
-                            predicted = (outputs>0.5).int()
+                            predicted = (outputs.sigmoid()>0.5).int()
                             predicted = torch.reshape(predicted, (-1,))
 
                         outputs_all.extend(predicted.tolist())
@@ -730,7 +730,7 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                 if model.output_size is not None and model.output_size == 2:
                     _, predicted = torch.max(outputs.data, 1)
                 else:
-                    predicted = (outputs>0.5).int()
+                    predicted = (outputs.sigmoid()>0.5).int()
                     predicted = torch.reshape(predicted, (-1,))
                     
                 y_pred.extend(predicted.tolist())
@@ -867,7 +867,7 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                     if model.output_size is not None and model.output_size == 2:
                         _, predicted = torch.max(outputs.data, 1)
                     else:
-                        predicted = (outputs>0.5).int()
+                        predicted = (outputs.sigmoid()>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
 
                     #X_list.extend(X)

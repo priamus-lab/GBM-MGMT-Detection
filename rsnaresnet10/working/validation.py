@@ -38,7 +38,7 @@ args = parser.parse_args()
 
 if args.csv_file != "all":
     data = pd.read_csv(f"../../RSNA-BTC-Datasets/{args.csv_file}")
-    if arg.csv_file == "upenn_train_fold_t1wce.csv":
+    if args.csv_file == "upenn_train_fold_t1wce.csv":
         data["BraTS21ID"] = data["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{str(x).zfill(5)}")
 else:
     data1 = pd.read_csv(f"../../RSNA-BTC-Datasets/train_fold.csv")
@@ -55,6 +55,7 @@ model.to(device)
 tta_true_labels = []
 tta_preds = []
 preds_f = np.zeros(len(data))
+pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 for type_ in ["T1wCE"]:
     preds_type = np.zeros(len(data))
@@ -102,6 +103,10 @@ for type_ in ["T1wCE"]:
         preds_f[val_index] += np.vstack(preds).T[0]/5
         preds_type[val_index] += np.vstack(preds).T[0]
         y_pred[val_index] += np.vstack(y_pred_fold).T[0]
+        y_pred_fold_int = 1*np.vstack(y_pred_fold).T[0]
+        df = pd.DataFrame({"BraTS21ID": np.hstack(case_ids).tolist(), "MGMT_value": targets[val_index].tolist(), "pred": y_pred_fold_int, "prob": np.vstack(preds).T[0]})
+        print(f"Fold {fold}:")
+        print(df)
         score_fold = roc_auc_score(targets[val_index], np.vstack(preds).T[0])
         metrics = get_metrics(targets[val_index].tolist(), np.vstack(y_pred_fold).T[0], np.vstack(preds).T[0], f"{fold}")
         print(f"the score of the fold number {fold} and the type {type_}: {score_fold}")
