@@ -1,0 +1,12 @@
+{
+val_loss: 0.867
+val_acc: 0.620
+val_auc: 0.503
+test_acc: 0.5410122164048866
+test_auc: 0.5283645031169784
+test_spec: 0.3
+test_sens: 0.7557755775577558
+test_prec: 0.5478468899521531
+test_0_count: 270
+test_1_count: 303
+}
