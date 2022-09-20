@@ -55,41 +55,42 @@ import timeit
 from scipy import io
 import os
 
-sys.path.append("..")
-from utils.dataset_utils import *
-from utils.classifier_utils import *
+from dataset_utils import *
+from classifier_utils import *
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format='%(asctime)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
-def retrieve_patients_list_from_datasets(dataset_0_mat, dataset_1_mat, dataset_test_mat):
+def retrieve_patients_list_from_datasets(dataset_0_mat=None, dataset_1_mat=None, dataset_test_mat=None):
     list_0 = []
     list_1 = []
     list_test = []
 
-    print("Train - Unmethylated Patients:")
-    for i in range(len(dataset_0_mat)):
-        #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
-        print(dataset_0_mat.__getid__(i))
-        list_0.append(dataset_0_mat.__getid__(i))
-        #print("---")
-        #fig = plt.figure(dataset_flair_t2w.__getitem__(i)[0+idx]+": "+str(dataset_flair_t2w.__getitem__(i)[4+idx]))
-        #plt.imshow(dataset_flair_t2w.__getitem__(i)[2+idx][128], cmap=cm.Greys_r, animated=True)
+    if dataset_0_mat is not None:
+        print("Train - Unmethylated Patients:")
+        for i in range(len(dataset_0_mat)):
+            #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
+            print(dataset_0_mat.__getid__(i))
+            list_0.append(dataset_0_mat.__getid__(i))
+            #print("---")
+            #fig = plt.figure(dataset_flair_t2w.__getitem__(i)[0+idx]+": "+str(dataset_flair_t2w.__getitem__(i)[4+idx]))
+            #plt.imshow(dataset_flair_t2w.__getitem__(i)[2+idx][128], cmap=cm.Greys_r, animated=True)
 
-    #plt.show()
-    print("Train - Methylated Patients:")
-    for i in range(len(dataset_1_mat)):
-        #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
-        print(dataset_1_mat.__getid__(i))
-        list_1.append(dataset_1_mat.__getid__(i))
-        #print("---")
+    if dataset_1_mat is not None:
+        print("Train - Methylated Patients:")
+        for i in range(len(dataset_1_mat)):
+            #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
+            print(dataset_1_mat.__getid__(i))
+            list_1.append(dataset_1_mat.__getid__(i))
+            #print("---")
 
-    print("Test - Unknown Patients:")
-    for i in range(len(dataset_test_mat)):
-        #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
-        print(dataset_test_mat.__getid__(i))
-        list_test.append(dataset_test_mat.__getid__(i))
-        #print("---")
+    if dataset_test_mat is not None:
+        print("Test - Unknown Patients:")
+        for i in range(len(dataset_test_mat)):
+            #print(str(i)+" - "+dataset_0_flair_t2w.__getitem__(i)[0]+": "+str(dataset_0_flair_t2w.__getitem__(i)[4]))
+            print(dataset_test_mat.__getid__(i))
+            list_test.append(dataset_test_mat.__getid__(i))
+            #print("---")
 
     patients_dict = {
         "train_0": list_0,
@@ -106,6 +107,8 @@ def filter_slice(X, is_T1w=False):
     X_top_f = X_top.flatten()
 
     patches = plt.hist(X_th_f[X_th_f>np.min(X_th_f)+0.1], bins=100)
+    # TO TEST
+    #patches = np.histogram(X_th_f[X_th_f>np.min(X_th_f)+0.1], bins=100)
     n0 = [p for p in patches[0]]
     n1 = [p for p in patches[1]]
     

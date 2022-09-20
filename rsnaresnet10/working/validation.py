@@ -35,7 +35,20 @@ parser.add_argument("--csv_file", default="train_fold.csv", type=str)
 parser.add_argument("--full_set", default=False, type=bool)
 args = parser.parse_args()
 
-
+comb = "unknown"
+if args.models_folder == "tunisiaai_A":
+    if args.csv_file == "train_fold.csv":
+        comb = "A"
+    else:
+        comb = "A_B"
+elif args.models_folder == "tunisiaai_B":
+    if args.csv_file == "train_fold.csv":
+        comb = "B_A"
+    else:
+        comb = "B"
+elif args.models_folder == "tunisiaai_AB":
+    comb = "AB"
+    
 if args.csv_file != "all":
     data = pd.read_csv(f"../../RSNA-BTC-Datasets/{args.csv_file}")
     if args.csv_file == "upenn_train_fold_t1wce.csv":
@@ -46,6 +59,7 @@ else:
     data2["BraTS21ID"] = data2["BraTS21ID"].apply(lambda x :f"UPENN-GBM-{str(x).zfill(5)}")
     data = data1.append(data2, ignore_index=True)
 
+all_ids = data.BraTS21ID.values
 targets = data.MGMT_value.values
 
 device = torch.device("cuda")
@@ -119,6 +133,11 @@ for type_ in ["T1wCE"]:
     #print(targets.tolist())
     #print(y_pred)
     #print(preds_type)
+    preddfA = pd.DataFrame({"BraTS21ID": all_ids, "MGMT_real_value": targets.tolist(), "MGMT_pred_value": y_pred, "MGMT_prob_value": preds_type}) 
+    #preddfA = preddfA.sort_values(by="BraTS21ID")
+    #print(preddfA)
+    preddfA.to_csv(f"../pred_metrics/{args.models_folder}_{comb}.csv", index=False)
+    
     metrics_ = get_metrics(targets.tolist(), y_pred, preds_type, f"all")
     if args.full_set:
         metrics = pd.DataFrame({"model": ["all"], "AUC": [metrics_["AUC"][0]], "acc": [sum(acc_list)/len(acc_list)], "spec": [sum(spec_list)/len(spec_list)], "sens": [sum(sens_list)/len(sens_list)], "prec": [sum(prec_list)/len(prec_list)]})

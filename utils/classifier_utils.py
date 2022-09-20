@@ -790,6 +790,7 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                         predicted = (outputs.sigmoid()>0.5).int() #sigmoid
                         predicted = torch.reshape(predicted, (-1,))
 
+                    # COMMENT IF SPACE IS REQUIRED
                     X_list.extend(X)
                     y_pred.extend(predicted.tolist())
 
@@ -870,7 +871,8 @@ def predict(model, device, modelfile, data_loader, size, is_target_included=True
                         predicted = (outputs.sigmoid()>0.5).int()
                         predicted = torch.reshape(predicted, (-1,))
 
-                    #X_list.extend(X)
+                    # COMMENT IF SPACE IS REQUIRED
+                    X_list.extend(X)
                     y_pred.extend(predicted.tolist())
 
                     if model.output_size is not None and model.output_size == 2:

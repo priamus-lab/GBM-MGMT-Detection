@@ -10,7 +10,7 @@ import numpy
 from tqdm import tqdm
 
 import torch
-import torchio as tio
+#import torchio as tio
 import torchvision
 import skimage
 from skimage import color
@@ -60,6 +60,10 @@ def get_nii_from_dcm_folder(dicom_input, nifti_output):
             try:
                 #dicom_input = dicom2nifti.common.read_dicom_directory(patient)
                 #print(dicom_input[0])
+                if not os.path.exists(nifti_output):
+                    os.mkdir(nifti_output)
+                if not os.path.exists(nifti_output+"/"+dir_name):
+                    os.mkdir(nifti_output+"/"+dir_name)
                 dicom2nifti.dicom_series_to_nifti(patient, os.path.join(nifti_output, dir_name, name + '.nii.gz'))
             except dicom2nifti.exceptions.ConversionValidationError as err:
                 print("Error with "+name+" in "+dir_name)
@@ -101,7 +105,7 @@ def group_nii_files_by_class(nifti_output):
                 print("Moving "+os.path.basename(patient)+" into "+value)
                 os.rename(patient, mri_type+"/"+value+"/"+os.path.basename(patient))
                 
-def get_patients_list_from_nii_folder(nifti_output)
+def get_patients_list_from_nii_folder(nifti_output):
     pat_list_2 = list()
 
     folder = glob(nifti_output + '/*')
@@ -153,7 +157,7 @@ def isometric_numpy_transform(sample, scale_factors, img_size):
     sample = sample.squeeze(0).numpy()
     return sample
 
-def load_nifti_image(path, img_size=IMAGE_SIZE):
+def load_nifti_image(path, img_size=256):
     nifti = nib.load(path)
     data = nifti.get_fdata().astype(np.float32)
     scale_factors = nifti.header.get_zooms()
@@ -189,7 +193,7 @@ def save_nii_images_3d_as_mat(
         if not os.path.exists(f"{main_path}/{folder}_mat/{mri_type}/{target}/{case_id}_{mri_type}.mat"):
             io.savemat(f"{main_path}/{folder}_mat/{mri_type}/{target}/{case_id}_{mri_type}.mat", data, do_compression=True)
             
-def import_train_and_test_from_csv(train_csv, test_csv)
+def import_train_and_test_from_csv(train_csv, test_csv):
     data = {}
     data["train"] = pd.read_csv(train_csv)
     data["test"] = pd.read_csv(test_csv)
