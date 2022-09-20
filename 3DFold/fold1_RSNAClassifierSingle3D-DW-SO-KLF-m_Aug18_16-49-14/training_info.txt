@@ -1,0 +1,19 @@
+{
+ext: mat
+dims: 3
+batch_size: 4
+mri_types: ['KLF']
+is_depth_wise: True
+is_transformed: False
+output_size: 1
+is_multistep: True
+lr: 0.0001
+is_adam: True
+momentum: 0.9
+is_10_fold: False
+val_total_ratio: 0.2
+is_internal_dataset: True
+train_origin: m
+val_origin: m
+net: RSNAClassifierSingle3D
+}
